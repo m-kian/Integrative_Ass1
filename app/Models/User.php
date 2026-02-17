@@ -47,3 +47,6 @@ class User extends Authenticatable
         ];
     }
 }
+
+
+user::first()->createToken('testProject');
