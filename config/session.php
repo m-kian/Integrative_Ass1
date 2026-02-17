@@ -154,9 +154,13 @@ return [
     | available to. By default, the cookie will be available to the root
     | domain without subdomains. Typically, this shouldn't be changed.
     |
+    | For Sanctum to work across subdomains, prefix the domain with a dot (.)
+    | to allow cookies to be shared across all subdomains:
+    | 'domain' => '.domain.com'
+    |
     */
 
-    'domain' => env('SESSION_DOMAIN'),
+    'domain' => env('SESSION_DOMAIN', '.' . parse_url(env('APP_URL'), PHP_URL_HOST)),
 
     /*
     |--------------------------------------------------------------------------
