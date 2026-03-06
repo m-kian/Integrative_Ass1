@@ -9,13 +9,26 @@ use Illuminate\Support\Facades\Validator;
 
 class UserController extends Controller
 {
-    public function index()
+    public function __construct()
     {
-        $users = User::with('roles')->paginate(10);
-        return view('users.index', compact('users'));
+        // Protect endpoints with Spatie permissions
+        $this->middleware('permission:view users')->only(['index', 'show']);
+        $this->middleware('permission:create users')->only('store');
+        $this->middleware('permission:edit users')->only('update');
+        $this->middleware('permission:delete users')->only('destroy');
     }
 
-    // Store new user
+    /**
+     * List users with their roles.
+     */
+    public function index()
+    {
+        return response()->json(User::with('roles')->paginate(10));
+    }
+
+    /**
+     * Store a new user with role assignment.
+     */
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -26,7 +39,7 @@ class UserController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return back()->withErrors($validator)->withInput();
+            return response()->json(['errors' => $validator->errors()], 422);
         }
 
         $user = User::create([
@@ -37,10 +50,20 @@ class UserController extends Controller
 
         $user->assignRole($request->input('role'));
 
-        return redirect()->route('users.index')->with('success', 'User created successfully.');
+        return response()->json(['message' => 'User created successfully', 'user' => $user], 201);
     }
 
-    // Update existing user
+    /**
+     * Show a single user.
+     */
+    public function show(User $user)
+    {
+        return response()->json($user->load('roles'));
+    }
+
+    /**
+     * Update an existing user and sync roles.
+     */
     public function update(Request $request, User $user)
     {
         $validator = Validator::make($request->all(), [
@@ -51,7 +74,7 @@ class UserController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return back()->withErrors($validator)->withInput();
+            return response()->json(['errors' => $validator->errors()], 422);
         }
 
         $payload = $request->only(['name', 'email']);
@@ -68,13 +91,15 @@ class UserController extends Controller
             $user->syncRoles([$request->input('role')]);
         }
 
-        return redirect()->route('users.index')->with('success', 'User updated successfully.');
+        return response()->json(['message' => 'User updated successfully', 'user' => $user]);
     }
 
-    // Delete user
+    /**
+     * Delete a user.
+     */
     public function destroy(User $user)
     {
         $user->delete();
-        return redirect()->route('users.index')->with('success', 'User deleted successfully.');
+        return response()->json(['message' => 'User deleted successfully']);
     }
 }
